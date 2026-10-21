@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "spawnloft-harness",
+	"version": "${version}",
+	"name": "SpawnLoft Harness",
+	"description": "Loopback control channel for SpawnLoft's client tests. Does nothing unless the JVM is started with -Dspawnloft.harness.token=<token>.",
+	"authors": ["joogiebear"],
+	"contact": {
+		"sources": "https://github.com/joogiebear/spawnloft-harness-mod"
+	},
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["dev.spawnloft.harness.HarnessMod"]
+	},
+	"mixins": [
+		{ "config": "spawnloft-harness.mixins.json", "environment": "client" }
+	],
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "~${minecraft_version}",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
