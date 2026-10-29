@@ -48,3 +48,15 @@ jobs:
             case "$f" in *-sources.jar) continue ;; esac
             echo "$(sha256sum "$f" | cut -d' ' -f1)  $(basename "$f")" >> "$GITHUB_STEP_SUMMARY"
           done
+      # TEMPORARY while porting: what the game's classes look like on this version
+      - name: Minecraft classes the mod uses
+        if: always()
+        run: |
+          jar=$(find ~/.gradle/caches .gradle -name 'minecraft-*.jar' -size +5M 2>/dev/null | grep -v sources | head -1)
+          echo "jar: $jar"
+          [ -n "$jar" ] || exit 0
+          unzip -l "$jar" | grep -E 'client/gui/(Gui|Hud)[^/]*\.class|client/gui/hud/' | head -40
+          for c in net.minecraft.client.Minecraft net.minecraft.client.gui.Gui; do javap -cp "$jar" "$c" | grep -iE 'screen|title|class ' ; done
+          hud=$(unzip -l "$jar" | grep -oE 'net/minecraft/client/gui/[A-Za-z/]*Hud\.class' | head -1 | sed 's#/#.#g; s#\.class$##')
+          [ -n "$hud" ] && javap -cp "$jar" "$hud" | grep -iE 'title|class '
+          javap -cp "$jar" net.minecraft.client.gui.screens.DisconnectedScreen net.minecraft.client.gui.screens.ConnectScreen net.minecraft.client.Screenshot | head -40
