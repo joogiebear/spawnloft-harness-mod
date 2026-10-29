@@ -42,6 +42,14 @@ jobs:
           java-version: 25
       - name: Build
         run: ./gradlew build --no-daemon
+      # Mixin targets are only checked when the game loads; check the ones this mod names here.
+      - name: Mixin targets exist
+        run: |
+          jar=$(find ~/.gradle/caches -path '*fabric-loom*' -name 'minecraft-merged.jar' | head -1)
+          [ -n "$jar" ] || { echo "no minecraft-merged.jar found"; exit 1; }
+          javap -p -cp "$jar" net.minecraft.client.gui.Hud | grep -q 'void setTitle(net.minecraft.network.chat.Component)' || { echo "Hud.setTitle(Component) is gone"; exit 1; }
+          javap -p -cp "$jar" net.minecraft.client.gui.screens.DisconnectedScreen | grep -qE ' details;' || { echo "DisconnectedScreen.details is gone"; exit 1; }
+          echo "Hud.setTitle and DisconnectedScreen.details are there"
       - name: Jar and sha256
         run: |
           for f in build/libs/spawnloft-harness-*.jar; do

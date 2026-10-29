@@ -100,7 +100,7 @@ public final class Ops {
 		joinedFlag = true;
 	}
 
-	/** Render thread, from the Gui mixin. */
+	/** Render thread, from the Hud mixin. */
 	public void recordTitle(String text) {
 		messages.add("title", text);
 	}
