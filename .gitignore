@@ -6,3 +6,7 @@ out/
 *.iml
 .vscode/
 bin/
+
+# signing keys never belong here
+*.pem
+*.key
