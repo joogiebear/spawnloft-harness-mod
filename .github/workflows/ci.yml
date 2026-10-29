@@ -48,12 +48,3 @@ jobs:
             case "$f" in *-sources.jar) continue ;; esac
             echo "$(sha256sum "$f" | cut -d' ' -f1)  $(basename "$f")" >> "$GITHUB_STEP_SUMMARY"
           done
-      # TEMPORARY while porting: what the game's classes look like on this version
-      - name: Minecraft classes the mod uses
-        if: always()
-        run: |
-          jar=$(find ~/.gradle/caches .gradle -name 'minecraft-*.jar' -size +5M 2>/dev/null | grep -v sources | head -1)
-          echo "jar: $jar"
-          [ -n "$jar" ] || exit 0
-          javap -p -cp "$jar" net.minecraft.client.Minecraft net.minecraft.client.renderer.GameRenderer | grep -iE 'RenderTarget|class '
-          javap -c -p -cp "$jar" net.minecraft.client.Screenshot | sed -n '/grab(net.minecraft.client.Minecraft, boolean)/,/^$/p' | grep -E 'invoke|getfield|Method|Field' | head -40

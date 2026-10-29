@@ -9,19 +9,10 @@ base {
 	archivesName = project.archives_base_name
 }
 
-// TEMPORARY while porting: fabric_api_version=latest picks the newest build for this Minecraft
-// version from Fabric's maven and prints it, so it can be pinned. A release needs it pinned.
-def fabricApiVersion = project.fabric_api_version
-if (fabricApiVersion == 'latest') {
-	def meta = new groovy.xml.XmlSlurper().parse('https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml')
-	fabricApiVersion = meta.versioning.versions.version*.text().findAll { it.endsWith('+' + project.minecraft_version) }.last()
-	logger.lifecycle("fabric-api for ${project.minecraft_version}: ${fabricApiVersion}")
-}
-
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${fabricApiVersion}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
 processResources {

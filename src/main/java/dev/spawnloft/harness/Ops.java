@@ -271,7 +271,7 @@ public final class Ops {
 		String name = "spawnloft-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH.mm.ss.SSS")) + ".png";
 		File dir = client.gameDirectory;
 		File target = new File(new File(dir, "screenshots"), name);
-		Screenshot.grab(dir, name, client.getMainRenderTarget(), 1, message -> {
+		Screenshot.grab(dir, name, client.gameRenderer.mainRenderTarget(), 1, message -> {
 			if (target.isFile()) {
 				JsonObject o = new JsonObject();
 				o.addProperty("file", target.getAbsolutePath());
