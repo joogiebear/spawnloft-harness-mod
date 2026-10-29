@@ -1,0 +1,58 @@
+# A pushed tag v<mod>-mc<minecraft> builds the jar from that commit and publishes it as the tag's
+# release, with its sha256 and the commit in the notes. The jar reaches SpawnLoft only once its row
+# is in the signed list, which is made on the signing machine from the jar that was hand-tested
+# (README, "Publishing a build"); this workflow never sees the signing key. Actions are pinned by
+# commit; only this job can write, and only to this repo's releases.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: 25
+      - name: The tag names this commit's build
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          mod=$(sed -n 's/^mod_version=//p' gradle.properties)
+          mc=$(sed -n 's/^minecraft_version=//p' gradle.properties)
+          if [ "$TAG" != "v${mod}-mc${mc}" ]; then
+            echo "::error::tag $TAG does not match gradle.properties (v${mod}-mc${mc})"
+            exit 1
+          fi
+          echo "JAR=build/libs/spawnloft-harness-${mod}+${mc}.jar" >> "$GITHUB_ENV"
+      - name: Build
+        run: ./gradlew build --no-daemon
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          sha=$(sha256sum "$JAR" | cut -d' ' -f1)
+          {
+            echo "Built by the release workflow from commit $COMMIT (tag $TAG)."
+            echo
+            echo "sha256 \`$sha\`  $(basename "$JAR")"
+            echo
+            echo "SpawnLoft offers this build once its row is in the signed harness list (see the README)."
+          } > notes.md
+          echo "sha256 $sha  $(basename "$JAR")" >> "$GITHUB_STEP_SUMMARY"
+          gh release create "$TAG" "$JAR" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file notes.md

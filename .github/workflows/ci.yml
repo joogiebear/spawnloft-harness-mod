@@ -1,0 +1,50 @@
+# Every pull request and every push to main or an mc/<version> branch: the signing script's tests,
+# the committed signed list (when there is one) checked against SpawnLoft's keys, and the mod built.
+# Nothing here has secrets or write access; actions are pinned by commit.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main, 'mc/**']
+
+permissions:
+  contents: read
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Signing script tests
+        run: node --test scripts/sign-index.test.mjs
+      - name: The committed list verifies with SpawnLoft's keys
+        if: hashFiles('harness-index.json') != ''
+        run: node scripts/sign-index.mjs verify
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: 25
+      - name: Build
+        run: ./gradlew build --no-daemon
+      - name: Jar and sha256
+        run: |
+          for f in build/libs/spawnloft-harness-*.jar; do
+            case "$f" in *-sources.jar) continue ;; esac
+            echo "$(sha256sum "$f" | cut -d' ' -f1)  $(basename "$f")" >> "$GITHUB_STEP_SUMMARY"
+          done
