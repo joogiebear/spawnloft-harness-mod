@@ -2,10 +2,10 @@
 	"required": true,
 	"minVersion": "0.8",
 	"package": "dev.spawnloft.harness.mixin",
-	"compatibilityLevel": "JAVA_21",
+	"compatibilityLevel": "JAVA_25",
 	"client": [
 		"DisconnectedScreenAccessor",
-		"GuiMixin"
+		"HudMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
