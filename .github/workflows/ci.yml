@@ -55,7 +55,5 @@ jobs:
           jar=$(find ~/.gradle/caches .gradle -name 'minecraft-*.jar' -size +5M 2>/dev/null | grep -v sources | head -1)
           echo "jar: $jar"
           [ -n "$jar" ] || exit 0
-          unzip -l "$jar" | grep -E 'client/gui/(Gui|Hud)[^/]*\.class|client/gui/hud/' | head -40
-          javap -cp "$jar" net.minecraft.client.Minecraft | grep -iE 'gui|hud|render|target|class '
-          javap -cp "$jar" net.minecraft.client.gui.Gui net.minecraft.client.gui.Hud | grep -iE 'class |hud|title|render|target'
-          javap -cp "$jar" net.minecraft.client.gui.screens.DisconnectedScreen net.minecraft.client.gui.screens.ConnectScreen net.minecraft.client.Screenshot | head -40
+          javap -p -cp "$jar" net.minecraft.client.Minecraft net.minecraft.client.renderer.GameRenderer | grep -iE 'RenderTarget|class '
+          javap -c -p -cp "$jar" net.minecraft.client.Screenshot | sed -n '/grab(net.minecraft.client.Minecraft, boolean)/,/^$/p' | grep -E 'invoke|getfield|Method|Field' | head -40
