@@ -78,4 +78,12 @@ Within a day every SpawnLoft offers the harness for `X`, and `spawnloft doctor` 
 
 Withdrawing a build: `node scripts/sign-index.mjs remove --minecraft X`, then steps 4 to 6 from `sign`. A version SpawnLoft carries built in (copied in at each stable SpawnLoft release) needs a SpawnLoft release as well.
 
-If a private key is lost or leaks: sign with the other one, and add `node scripts/sign-index.mjs revoke --spki <the bad key's public line>` before signing, so SpawnLoft stops trusting it; then ask for a SpawnLoft release with a new spare key.
+`sign` uses `%USERPROFILE%\.spawnloft-signing\harness-index-ed25519.pem` unless `--key <pem>` names another, for example the spare: `node scripts/sign-index.mjs sign --key %USERPROFILE%\.spawnloft-signing\harness-index-ed25519-spare.pem`.
+
+If a private key is lost or leaks, sign with the other one and revoke the bad one in the same list, so SpawnLoft stops trusting it:
+
+1. `node scripts/sign-index.mjs revoke --spki <the bad key's public line>`
+2. `node scripts/sign-index.mjs sign --key <the spare pem> --offline` (`--offline` because whatever is published may be the attacker's; the serial still goes above the committed one). If a list signed with the bad key was published with a serial higher than ours, add `--serial N` above it.
+3. `node scripts/sign-index.mjs verify` must print `verifies with the spare key`.
+4. Delete the bad assets from the `index` release, then step 5 above to upload, and step 6 to commit.
+5. Ask for a SpawnLoft release with a new spare key.

@@ -142,13 +142,18 @@ function committedSerial(dir) {
 }
 
 // The serial of the list SpawnLoft reads now; 0 when none is published; null when it could not
-// be read (sign then refuses unless --offline, so a re-sign cannot reuse a published serial).
+// be read or its serial is not one a next serial can follow (sign then refuses unless --offline,
+// so a re-sign cannot reuse a published serial). Not signature-checked: it only raises the floor.
+const PUBLISHED_MAX_BYTES = 256 * 1024
 export async function publishedSerial(fetchImpl = globalThis.fetch) {
   try {
     const res = await fetchImpl(PUBLISHED_URL, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': 'spawnloft-harness sign-index' } })
     if (res.status === 404) return 0
     if (!res.ok) return null
-    return Number(JSON.parse(await res.text()).serial) || 0
+    const text = await res.text()
+    if (text.length > PUBLISHED_MAX_BYTES) return null
+    const serial = JSON.parse(text).serial
+    return Number.isSafeInteger(serial) && serial >= 0 && serial < Number.MAX_SAFE_INTEGER ? serial : null
   } catch {
     return null
   }
@@ -169,8 +174,9 @@ export async function signIndex(dir, { key = DEFAULT_KEY, serial = null, offline
   const spki = spkiOf(privateKey)
   if (doc.revoke?.includes(spki)) fail('the list revokes the key it is being signed with; sign with the other key')
   const published = offline ? 0 : await publishedSerial(fetchImpl)
-  if (published === null) fail(`could not read the published list (${PUBLISHED_URL}) to pick a serial above it; try again, or --offline if it really is unreachable`)
+  if (published === null) fail(`could not read a usable serial from the published list (${PUBLISHED_URL}) to pick one above it; try again. If it is unreachable, or what is published there is not a list you signed, use --offline and see "If a private key is lost or leaks" in the README`)
   const next = Math.max(committedSerial(dir), doc.serial, published) + 1
+  if (!Number.isSafeInteger(next)) fail(`the next serial would be ${next}, which is past what SpawnLoft can read; see "If a private key is lost or leaks" in the README`)
   if (serial !== null && serial < next) fail(`--serial ${serial} is not above ${next - 1}, the highest serial committed, in the file or published`)
   doc.serial = serial ?? next
   doc.generated = now.toISOString().replace(/\.\d{3}Z$/, 'Z')
@@ -211,9 +217,22 @@ function args(argv) {
   return out
 }
 
+// Run from the top of the checkout: the list's path, the committed serial and the check that the
+// key is outside the checkout all count from there.
+function checkoutRoot() {
+  let top
+  try {
+    top = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch {
+    fail('run this inside a checkout of spawnloft-harness-mod')
+  }
+  if (fs.realpathSync(top) !== fs.realpathSync(process.cwd())) fail(`run this from the top of the checkout (${top}), not from a folder inside it`)
+  return top
+}
+
 async function main(argv) {
   const a = args(argv)
-  const dir = process.cwd()
+  const dir = checkoutRoot()
   switch (a._[0]) {
     case 'add': {
       const { sha256, row } = addRow(dir, { minecraft: a.minecraft, version: a.version, tag: a.tag, jar: a.jar, sha256: a.sha256, file: a.file })
@@ -247,7 +266,7 @@ async function main(argv) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main(process.argv.slice(2)).catch((err) => {
-    console.error(err instanceof SignError ? `sign-index: ${err.message}` : err)
+    console.error(`sign-index: ${err instanceof SignError ? '' : 'unexpected error: '}${err.message}`)
     process.exitCode = 1
   })
 }

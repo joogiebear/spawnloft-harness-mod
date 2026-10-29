@@ -67,7 +67,14 @@ test('sign gives the next serial above what is committed, in the file and publis
   const none = async () => ({ ok: false, status: 404, text: async () => 'Not Found' })
   assert.equal(await publishedSerial(none), 0)
   const down = async () => { throw new Error('offline') }
-  await assert.rejects(signIndex(dir, { key: primary.file, fetchImpl: down }), /could not read the published list/)
+  await assert.rejects(signIndex(dir, { key: primary.file, fetchImpl: down }), /could not read a usable serial.*--offline/)
+  // a published serial nothing can follow, or one that is not a serial, is unreadable, not a crash
+  for (const serial of [Number.MAX_SAFE_INTEGER, -1, 1.5, '12']) {
+    const odd = async () => ({ ok: true, status: 200, text: async () => JSON.stringify({ serial }) })
+    assert.equal(await publishedSerial(odd), null)
+  }
+  const huge = async () => ({ ok: true, status: 200, text: async () => ' '.repeat(300 * 1024) + '{"serial":1}' })
+  assert.equal(await publishedSerial(huge), null)
   await assert.rejects(signIndex(dir, { key: primary.file, serial: 5, ...offline }), /not above 11/)
 
   // the written bytes are the script's own formatting, and the .sig is over the domain-prefixed bytes
@@ -124,6 +131,21 @@ test('a key inside the checkout or readable by others is refused', async () => {
     fs.chmodSync(loose, 0o644)
     await assert.rejects(signIndex(dir, { key: loose, ...offline }), /readable by other users/)
   }
+})
+
+test('the command line refuses to run below the top of the checkout', () => {
+  const { dir, commit } = repo()
+  fs.writeFileSync(path.join(dir, 'README.md'), 'x')
+  commit()
+  fs.mkdirSync(path.join(dir, 'scripts'))
+  const script = path.join(import.meta.dirname, 'sign-index.mjs')
+  let out = ''
+  try {
+    execFileSync(process.execPath, [script, 'verify'], { cwd: path.join(dir, 'scripts'), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+  } catch (err) {
+    out = err.stderr
+  }
+  assert.match(out, /^sign-index: run this from the top of the checkout/)
 })
 
 test('validate holds the same rules SpawnLoft reads with', () => {
