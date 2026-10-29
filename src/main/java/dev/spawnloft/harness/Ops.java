@@ -82,7 +82,7 @@ public final class Ops {
 			r.ok(o);
 			return;
 		}
-		if (client.screen instanceof DisconnectedScreen d) {
+		if (client.gui.screen() instanceof DisconnectedScreen d) {
 			Reply r = pendingJoin;
 			pendingJoin = null;
 			r.error("disconnected: " + disconnectReason(d));
@@ -115,7 +115,7 @@ public final class Ops {
 
 	private JsonObject status(Minecraft client) {
 		JsonObject o = new JsonObject();
-		Screen s = client.screen;
+		Screen s = client.gui.screen();
 		String kind;
 		if (client.level == null) {
 			if (s instanceof TitleScreen) kind = "title";
@@ -172,7 +172,7 @@ public final class Ops {
 		joinedFlag = false;
 		pendingJoin = reply;
 		pendingJoinDeadline = System.currentTimeMillis() + JOIN_TIMEOUT_MS;
-		Screen parent = client.screen == null ? new TitleScreen() : client.screen;
+		Screen parent = client.gui.screen() == null ? new TitleScreen() : client.gui.screen();
 		ConnectScreen.startConnecting(parent, client, address, data, false, null);
 	}
 
@@ -181,7 +181,7 @@ public final class Ops {
 			client.level.disconnect(Component.literal("Disconnected by SpawnLoft"));
 		}
 		client.disconnectWithProgressScreen();
-		client.setScreen(new JoinMultiplayerScreen(new TitleScreen()));
+		client.gui.setScreen(new JoinMultiplayerScreen(new TitleScreen()));
 		reply.ok();
 	}
 
@@ -238,7 +238,7 @@ public final class Ops {
 
 	private JsonObject screen(Minecraft client) {
 		JsonObject o = new JsonObject();
-		Screen s = client.screen;
+		Screen s = client.gui.screen();
 		if (s == null) {
 			o.addProperty("kind", "none");
 			o.addProperty("title", "");

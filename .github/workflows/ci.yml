@@ -56,7 +56,6 @@ jobs:
           echo "jar: $jar"
           [ -n "$jar" ] || exit 0
           unzip -l "$jar" | grep -E 'client/gui/(Gui|Hud)[^/]*\.class|client/gui/hud/' | head -40
-          for c in net.minecraft.client.Minecraft net.minecraft.client.gui.Gui; do javap -cp "$jar" "$c" | grep -iE 'screen|title|class ' ; done
-          hud=$(unzip -l "$jar" | grep -oE 'net/minecraft/client/gui/[A-Za-z/]*Hud\.class' | head -1 | sed 's#/#.#g; s#\.class$##')
-          [ -n "$hud" ] && javap -cp "$jar" "$hud" | grep -iE 'title|class '
+          javap -cp "$jar" net.minecraft.client.Minecraft | grep -iE 'gui|hud|render|target|class '
+          javap -cp "$jar" net.minecraft.client.gui.Gui net.minecraft.client.gui.Hud | grep -iE 'class |hud|title|render|target'
           javap -cp "$jar" net.minecraft.client.gui.screens.DisconnectedScreen net.minecraft.client.gui.screens.ConnectScreen net.minecraft.client.Screenshot | head -40
